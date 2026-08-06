@@ -1,0 +1,31 @@
+modules:
+  jira:issuePanel:
+    - key: change-management-revisor-panel
+      resource: main
+      resolver:
+        function: resolver
+      render: native
+      title: Change Management Revisor
+      icon: https://developer.atlassian.com/platform/forge/images/icons/issue-panel-icon.svg
+      displayConditions:
+        and:
+          projectKey: GML
+          issueType: '[System] Mudança'
+          # Piloto controlado: só a conta abaixo vê o painel. Ver ALLOWED_ACCOUNT_IDS
+          # em src/constants.js — as duas listas precisam ser mantidas em sincronia.
+          jiraExpression: 'user.accountId == "712020:72bf3386-d379-4be9-8784-65ca4ef74442"'
+  function:
+    - key: resolver
+      handler: index.handler
+resources:
+  - key: main
+    path: src/frontend/index.jsx
+permissions:
+  scopes:
+    - read:jira-work
+app:
+  runtime:
+    name: nodejs24.x
+    memoryMB: 256
+    architecture: arm64
+  id: ari:cloud:ecosystem::app/d6044dde-8d1a-4b89-b7da-807273ec6d4d
