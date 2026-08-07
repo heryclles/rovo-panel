@@ -23,6 +23,8 @@ resources:
 permissions:
   scopes:
     - read:jira-work
+    # Grava o feedback do usuário nos campos de avaliação do agente.
+    - write:jira-work
 app:
   runtime:
     name: nodejs24.x

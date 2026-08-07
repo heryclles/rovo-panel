@@ -70,6 +70,35 @@ Como a cor vem só do hash, dois pontos distintos podem cair na mesma cor no mes
 
 Os valores das listas de seleção são exibidos **exatamente como o Jira devolve** — sem tradução, dicionário ou reformatação. A única leitura do conteúdo é a cor do lozenge do resultado (`getVerdictAppearance` em `src/frontend/labels.js`), que procura trechos como "reprov", "ressalv" e "aprov" ignorando acentos e caixa; qualquer valor não reconhecido fica na cor neutra, sem alterar o texto exibido.
 
+## Feedback sobre o agente
+
+Abaixo das abas, o painel oferece uma avaliação da revisão: nota de 1 a 5 em
+estrelas e um comentário opcional, preenchidos num modal e gravados em campos da
+issue — de onde saem os indicadores por JQL, dashboard ou exportação.
+
+| Campo | Tipo no Jira | Conteúdo |
+| --- | --- | --- |
+| Avaliação do Agente | Number field | Nota de 1 a 5 |
+| Comentário da Avaliação | Paragraph | Comentário opcional (até 1000 caracteres) |
+| Avaliado por | User picker (single) | Quem avaliou |
+| Data da Avaliação | Date time picker | Quando avaliou |
+
+Os IDs ficam em `FEEDBACK_FIELDS` (`src/constants.js`). **Enquanto estiverem
+vazios, o bloco de feedback não aparece e nada é gravado**, então o app pode ser
+deployado antes de os campos existirem.
+
+Dois pontos que costumam travar a gravação:
+
+1. os quatro campos precisam estar na tela de **edição** do projeto GML /
+   `[System] Mudança` — se não estiverem, a REST API responde 400 com "Field
+   cannot be set. It is not on the appropriate screen, or unknown";
+2. o escopo `write:jira-work` exige `forge install --upgrade` após o deploy.
+
+A gravação usa `api.asApp()`, e não `asUser()`: avaliar a revisão não deveria
+exigir permissão de edição na issue. Como o changelog registra a alteração como
+sendo do app, a autoria fica no campo "Avaliado por". É **um feedback por item**
+— reavaliar sobrescreve a nota anterior, e o histórico fica no changelog.
+
 ## Estrutura
 
 ```
@@ -86,6 +115,8 @@ src/
     ├── parseReview.js              # texto do agente -> linhas de tabela (preservando ADF)
     └── components/
         ├── ReviewVerdict.jsx       # resultado da revisão, centralizado e em destaque
+        ├── AgentFeedback.jsx       # bloco de avaliação + modal
+        ├── StarRating.jsx          # nota de 1 a 5 (leitura e edição)
         ├── AttentionPoints.jsx     # tags coloridas por hash
         ├── IncompleteReviewWarning.jsx  # aviso de campos ainda não preenchidos
         ├── DimensionsTable.jsx     # tabela das 11 dimensões

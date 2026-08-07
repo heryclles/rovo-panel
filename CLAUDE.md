@@ -9,8 +9,18 @@ App Forge (UI Kit, JavaScript) com um painel de item de trabalho no Jira
 chamado **Change Management Revisor**. Ele lê 5 campos que uma automação
 preenche a partir da saída de um agente de IA do Rovo e os apresenta juntos.
 
-**O painel só lê.** Não executa IA, não grava campo, não transiciona issue. Se
-uma tarefa pedir escrita, confirme antes — hoje o escopo é só `read:jira-work`.
+O painel **lê** os 5 campos da revisão e **grava** apenas os 4 campos de
+feedback do usuário (nota de 1 a 5 e comentário). Não executa IA, não altera os
+campos da revisão nem transiciona a issue. Escopos: `read:jira-work` e
+`write:jira-work`.
+
+A escrita do feedback usa `api.asApp()` de propósito: avaliar a revisão não
+deveria exigir permissão de edição na issue. A autoria fica registrada no campo
+"Avaliado por", preenchido com o `accountId` de quem estava no painel.
+
+Enquanto `FEEDBACK_FIELDS` (em `src/constants.js`) tiver IDs vazios, o bloco de
+feedback não aparece e nada é gravado — dá para deployar antes de os campos
+existirem no Jira.
 
 ## Ambiente real
 
@@ -87,9 +97,13 @@ então o Node reclama por warning mas funciona.
 - **Nos design tokens o cinza é `gray`; no componente `Tag` é `grey`.**
 - **`xcss` do `@forge/react` é `(style) => style`** — identidade em runtime, sem
   transformação de build, então dá para montar tokens dinamicamente.
-- **`route` faz percent-encoding dos valores interpolados**, o que quebraria as
-  vírgulas da query `fields` — por isso a lista de campos é literal no template
-  em `jira-service.js`.
+- **`route` faz percent-encoding dos valores interpolados na query.** Para a
+  lista de `fields`, `jira-service.js` usa `URLSearchParams` repetindo o
+  parâmetro (`fields=a&fields=b`), o que evita vírgulas codificadas e permite
+  montar a lista dinamicamente.
+- **Escrever em campo exige o campo na tela de EDIÇÃO** do projeto/tipo. Sem
+  isso a REST API responde 400 "Field cannot be set. It is not on the
+  appropriate screen, or unknown." Automação do Jira não sofre disso, app sim.
 
 ## Convenções
 

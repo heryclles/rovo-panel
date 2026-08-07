@@ -12,6 +12,7 @@ import ForgeReconciler, {
 } from '@forge/react';
 import { invoke } from '@forge/bridge';
 
+import { AgentFeedback } from './components/AgentFeedback';
 import { AttentionPoints } from './components/AttentionPoints';
 import { ContextTable } from './components/ContextTable';
 import { DimensionsTable } from './components/DimensionsTable';
@@ -123,6 +124,7 @@ const App = () => {
           )}
         </TabPanel>
       </Tabs>
+      {data.feedbackEnabled ? <AgentFeedback feedback={data.feedback} /> : null}
     </Stack>
   );
 };

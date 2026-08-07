@@ -1,13 +1,27 @@
 import api, { route } from '@forge/api';
 
-import { REVIEW_FIELDS } from '../constants';
+import { FEEDBACK_FIELDS, REVIEW_FIELDS, isFeedbackConfigured } from '../constants';
 import { toAdfDocument, toOptionValue, toOptionValues } from './adf';
 
-// A lista fica literal no template porque `route` faz percent-encoding dos
-// valores interpolados, o que quebraria os separadores da query `fields`.
-const FIELDS_QUERY =
-  'issuetype,project,' +
-  'customfield_31913,customfield_31914,customfield_31915,customfield_31916,customfield_31917';
+const BASE_FIELDS = ['issuetype', 'project'];
+
+/**
+ * `route` faz percent-encoding dos valores interpolados na query, então uma
+ * lista separada por vírgula viraria `a%2Cb`. Repetir o parâmetro (`fields=a&
+ * fields=b`) evita a questão por completo e mantém a lista dinâmica.
+ */
+const buildFieldsQuery = () => {
+  const params = new URLSearchParams();
+
+  BASE_FIELDS.forEach((field) => params.append('fields', field));
+  Object.values(REVIEW_FIELDS).forEach((field) => params.append('fields', field));
+
+  if (isFeedbackConfigured()) {
+    Object.values(FEEDBACK_FIELDS).forEach((field) => params.append('fields', field));
+  }
+
+  return params;
+};
 
 /**
  * Lê a issue como o usuário logado, para que o painel nunca exponha dados
@@ -16,7 +30,7 @@ const FIELDS_QUERY =
 export const getIssue = async (issueKey) => {
   const response = await api
     .asUser()
-    .requestJira(route`/rest/api/3/issue/${issueKey}?fields=${FIELDS_QUERY}`, {
+    .requestJira(route`/rest/api/3/issue/${issueKey}?${buildFieldsQuery()}`, {
       headers: { Accept: 'application/json' },
     });
 
@@ -31,6 +45,22 @@ export const getIssue = async (issueKey) => {
   }
 
   return response.json();
+};
+
+const mapFeedback = (fields) => {
+  if (!isFeedbackConfigured()) {
+    return null;
+  }
+
+  const rating = fields[FEEDBACK_FIELDS.nota];
+  const author = fields[FEEDBACK_FIELDS.autor];
+
+  return {
+    nota: typeof rating === 'number' ? rating : null,
+    comentario: toAdfDocument(fields[FEEDBACK_FIELDS.comentario]),
+    autor: author ? { accountId: author.accountId, nome: author.displayName || null } : null,
+    data: fields[FEEDBACK_FIELDS.data] || null,
+  };
 };
 
 /** Converte a resposta crua da API do Jira no contrato consumido pelo painel. */
@@ -61,6 +91,48 @@ export const mapIssueToReview = (issue) => {
       projectKey: fields.project?.key || null,
     },
     review,
+    feedback: mapFeedback(fields),
     hasReview,
   };
+};
+
+const toParagraphDocument = (text) => ({
+  type: 'doc',
+  version: 1,
+  content: [{ type: 'paragraph', content: [{ type: 'text', text }] }],
+});
+
+/**
+ * Grava o feedback como o app, e não como o usuário: avaliar a revisão não
+ * deveria exigir permissão de edição na issue. A autoria fica registrada no
+ * campo "Avaliado por", preenchido com quem estava no painel.
+ */
+export const saveFeedback = async (issueKey, { rating, comment, accountId }) => {
+  const trimmed = (comment || '').trim();
+
+  const fields = {
+    [FEEDBACK_FIELDS.nota]: rating,
+    [FEEDBACK_FIELDS.comentario]: trimmed ? toParagraphDocument(trimmed) : null,
+    [FEEDBACK_FIELDS.autor]: accountId ? { accountId } : null,
+    // Formato de data/hora aceito pelo Jira: ISO 8601 com offset explícito.
+    [FEEDBACK_FIELDS.data]: new Date().toISOString().replace('Z', '+0000'),
+  };
+
+  const response = await api.asApp().requestJira(route`/rest/api/3/issue/${issueKey}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({ fields }),
+  });
+
+  if (!response.ok) {
+    const detail = await response.text();
+    console.error(`Falha ao gravar feedback em ${issueKey}: HTTP ${response.status} — ${detail}`);
+
+    if (response.status === 400) {
+      throw new Error(
+        'O Jira recusou a gravação. Confira se os campos de feedback estão na tela de edição do projeto.'
+      );
+    }
+    throw new Error(`Não foi possível salvar a avaliação (HTTP ${response.status}).`);
+  }
 };
