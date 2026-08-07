@@ -15,7 +15,6 @@ import { invoke } from '@forge/bridge';
 import { AttentionPoints } from './components/AttentionPoints';
 import { ContextTable } from './components/ContextTable';
 import { DimensionsTable } from './components/DimensionsTable';
-import { FeedbackDetails } from './components/FeedbackDetails';
 import { FeedbackModal } from './components/FeedbackModal';
 import { FeedbackPrompt } from './components/FeedbackPrompt';
 import { IncompleteReviewWarning } from './components/IncompleteReviewWarning';
@@ -94,7 +93,6 @@ const App = () => {
   // conteúdo que o parser não soube interpretar.
   const dimensions = parseDimensions(review.avaliacaoDimensoes);
   const contextBlocks = parseContextBlocks(review.enriquecimentoContexto);
-  const hasFeedback = Boolean(feedback?.nota);
 
   // As abas são montadas a partir de uma lista para que Tab e TabPanel nunca
   // saiam de ordem quando a aba de avaliação entra ou sai.
@@ -136,14 +134,6 @@ const App = () => {
         ),
     },
   ];
-
-  if (hasFeedback) {
-    tabs.push({
-      key: 'avaliacao',
-      title: 'Avaliação',
-      content: <FeedbackDetails feedback={feedback} />,
-    });
-  }
 
   return (
     <Stack space="space.200">
