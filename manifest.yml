@@ -6,7 +6,7 @@ modules:
         function: resolver
       render: native
       title: Change Management Revisor
-      icon: https://developer.atlassian.com/platform/forge/images/icons/issue-panel-icon.svg
+      icon: https://almarise.com/wp-content/uploads/2024/10/rovo-logo-png.webp
       displayConditions:
         and:
           projectKey: GML
