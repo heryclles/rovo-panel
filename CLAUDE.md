@@ -14,9 +14,13 @@ feedback do usuário (nota de 1 a 5 e comentário). Não executa IA, não altera
 campos da revisão nem transiciona a issue. Escopos: `read:jira-work` e
 `write:jira-work`.
 
-A escrita do feedback usa `api.asApp()` de propósito: avaliar a revisão não
-deveria exigir permissão de edição na issue. A autoria fica registrada no campo
-"Avaliado por", preenchido com o `accountId` de quem estava no painel.
+**Toda chamada ao Jira usa `api.asApp()`** — leitura e escrita. Avaliar a
+revisão não deveria exigir permissão de edição na issue, e a leitura seguiu o
+mesmo caminho a pedido do usuário. Consequência: nenhuma chamada carrega a
+permissão de quem está no painel, então quem faz o controle de acesso é o
+resolver (projeto, tipo e `ALLOWED_ACCOUNT_IDS`) somado ao fato de o painel só
+ser montado dentro da issue aberta. A autoria do feedback fica registrada no
+campo "Avaliado por", preenchido com o `accountId` de quem estava no painel.
 
 Enquanto `FEEDBACK_FIELDS` (em `src/constants.js`) tiver IDs vazios, o bloco de
 feedback não aparece e nada é gravado — dá para deployar antes de os campos
@@ -31,6 +35,7 @@ existirem no Jira.
 | Tipo de item | `[System] Mudança`, id `10056` |
 | Issue com dados reais | `GML-151723` — útil para conferir formatos |
 | Usuários | Todos que enxergam a issue (`ALLOWED_ACCOUNT_IDS` vazio) |
+| Ambiente instalado | **`production`** — e só ele |
 
 O painel já foi um piloto restrito a uma conta; o mecanismo continua no código.
 Restringir de novo exige mexer em **dois** lugares que precisam ficar em
@@ -42,14 +47,24 @@ devolver dados.
 ## Comandos
 
 ```bash
-npx forge deploy -e development --non-interactive   # publica; roda forge lint junto
-npx forge install --upgrade --site clarobr.atlassian.net --product jira -e development
+npx forge deploy -e production --non-interactive    # publica; roda forge lint junto
+npx forge install list                              # confere versão e ambiente instalados
 npx eslint "src/**/*.{js,jsx}"                      # lint do código
 ```
 
-O app **já está instalado** no site (development). `forge install` sem
-`--upgrade` falha com "already installed" — use `--upgrade`. Upload para o S3
-às vezes cai com "socket hang up"; basta repetir o deploy.
+**Deploy em `development` não chega a ninguém.** A única instalação no site é
+de `production` (confirmado em 07/08/2026 via `forge install list`) — publicar
+em development só cria uma versão que nenhum usuário roda. É um erro fácil de
+cometer e difícil de perceber, porque o deploy termina com sucesso. Sempre
+confira com `forge install list` qual ambiente e major estão instalados antes
+de concluir que uma correção está no ar.
+
+Enquanto os escopos do `manifest.yml` não mudarem, o deploy se propaga sozinho
+para a instalação (o status vira `Up-to-date` na nova minor) e **não** é preciso
+reinstalar. Se os escopos mudarem, aí sim rode
+`npx forge install --upgrade --site clarobr.atlassian.net --product jira -e production`;
+sem `--upgrade` falha com "already installed". Upload para o S3 às vezes cai com
+"socket hang up"; basta repetir o deploy.
 
 Não há suíte de testes. Para validar lógica pura (parsers, hash), escreva um
 script `.mjs` temporário em `/tmp` importando os módulos por caminho absoluto e
@@ -79,6 +94,23 @@ então o Node reclama por warning mas funciona.
   ter.
 
 ## Armadilhas descobertas na marra
+
+- **App em "Not sharing" só funciona para os contributors.** Foi a causa de
+  todo mundo, menos o autor, ver "you need to grant it access to Atlassian apps
+  on your behalf" no lugar do painel. A doc é explícita: com distribuição
+  **Not sharing** o app é tratado como de uso exclusivo de quem o desenvolve, e
+  todos os demais — inclusive usuários licenciados e contas portal-only do JSM
+  — são barrados. **Não tem relação com `asApp` vs `asUser`**: apps `asApp`-only
+  sofrem igual. Correção: developer console → app → **Distribution** →
+  *Distribution controls* → **Edit** → **Sharing**. Não é preciso reinstalar
+  nem usar o link de instalação gerado; o link serve para instalar em outros
+  sites. Não existe comando de CLI para isso.
+  Ver [doc](https://developer.atlassian.com/platform/forge/distribute-your-apps/)
+  e [thread da comunidade](https://community.developer.atlassian.com/t/jsm-portal-customers-hit-allow-access-on-your-behalf-consent-asapp-only-app/101231).
+
+- **`asUser()` também exige consentimento individual**, por outro caminho —
+  mas não era a causa do sintoma acima. Hoje o app é `asApp` em tudo, então a
+  questão não se aplica.
 
 - **A automação do Jira converte o texto do agente com wiki markup, não
   markdown.** Negrito é `*texto*` com **um** asterisco. Como o prompt do agente

@@ -24,22 +24,22 @@ const buildFieldsQuery = () => {
 };
 
 /**
- * Lê a issue como o usuário logado, para que o painel nunca exponha dados
- * além do que a pessoa já enxerga na própria issue.
+ * Lê a issue como o app. O painel só é montado dentro da própria issue, e o
+ * resolver revalida projeto, tipo e conta antes de devolver qualquer dado.
  */
 export const getIssue = async (issueKey) => {
   const response = await api
-    .asUser()
+    .asApp()
     .requestJira(route`/rest/api/3/issue/${issueKey}?${buildFieldsQuery()}`, {
       headers: { Accept: 'application/json' },
     });
 
   if (!response.ok) {
     if (response.status === 404) {
-      throw new Error(`Item de trabalho ${issueKey} não encontrado ou sem permissão de acesso.`);
+      throw new Error(`Item de trabalho ${issueKey} não encontrado.`);
     }
     if (response.status === 401 || response.status === 403) {
-      throw new Error('Você não tem permissão para visualizar este item de trabalho.');
+      throw new Error('O app não tem permissão para consultar este item de trabalho.');
     }
     throw new Error(`Falha ao consultar a API do Jira (HTTP ${response.status}).`);
   }
