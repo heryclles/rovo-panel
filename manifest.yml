@@ -11,9 +11,6 @@ modules:
         and:
           projectKey: GML
           issueType: '[System] Mudança'
-          # Piloto controlado: só a conta abaixo vê o painel. Ver ALLOWED_ACCOUNT_IDS
-          # em src/constants.js — as duas listas precisam ser mantidas em sincronia.
-          jiraExpression: 'user.accountId == "712020:72bf3386-d379-4be9-8784-65ca4ef74442"'
   function:
     - key: resolver
       handler: index.handler
