@@ -12,10 +12,12 @@ import ForgeReconciler, {
 } from '@forge/react';
 import { invoke } from '@forge/bridge';
 
-import { AgentFeedback } from './components/AgentFeedback';
 import { AttentionPoints } from './components/AttentionPoints';
 import { ContextTable } from './components/ContextTable';
 import { DimensionsTable } from './components/DimensionsTable';
+import { FeedbackDetails } from './components/FeedbackDetails';
+import { FeedbackModal } from './components/FeedbackModal';
+import { FeedbackPrompt } from './components/FeedbackPrompt';
 import { IncompleteReviewWarning } from './components/IncompleteReviewWarning';
 import { ReviewVerdict } from './components/ReviewVerdict';
 import { RichTextSection } from './components/RichTextSection';
@@ -25,6 +27,12 @@ import { parseContextBlocks, parseDimensions } from './parseReview';
 const App = () => {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
+  // O feedback vive aqui em cima porque é editado pelo botão do cabeçalho e
+  // exibido na aba de avaliação.
+  const [feedback, setFeedback] = useState(null);
+  const [isRating, setIsRating] = useState(false);
+  // Nota escolhida no rodapé, usada para abrir o modal já preenchido.
+  const [ratingDraft, setRatingDraft] = useState(0);
 
   // O painel lê a issue a cada montagem e não guarda cache, então recarregar a
   // página já busca os dados de novo — como qualquer outro campo da issue.
@@ -39,6 +47,7 @@ const App = () => {
 
         if (response?.ok) {
           setData(response);
+          setFeedback(response.feedback);
         } else if (response?.notApplicable) {
           setError('Este painel só se aplica a mudanças da Central de Mudanças e Liberação (GML).');
         } else if (response?.notAllowed) {
@@ -85,6 +94,56 @@ const App = () => {
   // conteúdo que o parser não soube interpretar.
   const dimensions = parseDimensions(review.avaliacaoDimensoes);
   const contextBlocks = parseContextBlocks(review.enriquecimentoContexto);
+  const hasFeedback = Boolean(feedback?.nota);
+
+  // As abas são montadas a partir de uma lista para que Tab e TabPanel nunca
+  // saiam de ordem quando a aba de avaliação entra ou sai.
+  const tabs = [
+    {
+      key: 'justificativa',
+      title: 'Justificativa',
+      content: (
+        <RichTextSection
+          document={review.justificativaRevisao}
+          emptyLabel="A revisão não registrou justificativa para a decisão."
+        />
+      ),
+    },
+    {
+      key: 'dimensoes',
+      title: 'Dimensões',
+      content:
+        dimensions.length > 0 ? (
+          <DimensionsTable dimensions={dimensions} />
+        ) : (
+          <RichTextSection
+            document={review.avaliacaoDimensoes}
+            emptyLabel="A avaliação das dimensões ainda não foi preenchida."
+          />
+        ),
+    },
+    {
+      key: 'contexto',
+      title: 'Contexto',
+      content:
+        contextBlocks.length > 0 ? (
+          <ContextTable blocks={contextBlocks} />
+        ) : (
+          <RichTextSection
+            document={review.enriquecimentoContexto}
+            emptyLabel="O enriquecimento de contexto ainda não foi preenchido."
+          />
+        ),
+    },
+  ];
+
+  if (hasFeedback) {
+    tabs.push({
+      key: 'avaliacao',
+      title: 'Avaliação',
+      content: <FeedbackDetails feedback={feedback} />,
+    });
+  }
 
   return (
     <Stack space="space.200">
@@ -93,38 +152,38 @@ const App = () => {
       <AttentionPoints points={review.pontosAtencao} />
       <Tabs id="change-management-revisor-tabs">
         <TabList>
-          <Tab>Justificativa</Tab>
-          <Tab>Dimensões</Tab>
-          <Tab>Contexto</Tab>
+          {tabs.map((tab) => (
+            <Tab key={tab.key}>{tab.title}</Tab>
+          ))}
         </TabList>
-        <TabPanel>
-          <RichTextSection
-            document={review.justificativaRevisao}
-            emptyLabel="A revisão não registrou justificativa para a decisão."
-          />
-        </TabPanel>
-        <TabPanel>
-          {dimensions.length > 0 ? (
-            <DimensionsTable dimensions={dimensions} />
-          ) : (
-            <RichTextSection
-              document={review.avaliacaoDimensoes}
-              emptyLabel="A avaliação das dimensões ainda não foi preenchida."
-            />
-          )}
-        </TabPanel>
-        <TabPanel>
-          {contextBlocks.length > 0 ? (
-            <ContextTable blocks={contextBlocks} />
-          ) : (
-            <RichTextSection
-              document={review.enriquecimentoContexto}
-              emptyLabel="O enriquecimento de contexto ainda não foi preenchido."
-            />
-          )}
-        </TabPanel>
+        {tabs.map((tab) => (
+          <TabPanel key={tab.key}>{tab.content}</TabPanel>
+        ))}
       </Tabs>
-      {data.feedbackEnabled ? <AgentFeedback feedback={data.feedback} /> : null}
+      {data.feedbackEnabled ? (
+        <FeedbackPrompt
+          feedback={feedback}
+          onPick={(star) => {
+            setRatingDraft(star);
+            setIsRating(true);
+          }}
+          onEdit={() => {
+            setRatingDraft(0);
+            setIsRating(true);
+          }}
+        />
+      ) : null}
+      {isRating ? (
+        <FeedbackModal
+          current={feedback}
+          initialRating={ratingDraft}
+          onClose={() => setIsRating(false)}
+          onSaved={(saved) => {
+            setFeedback(saved);
+            setIsRating(false);
+          }}
+        />
+      ) : null}
     </Stack>
   );
 };

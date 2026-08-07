@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  Box,
   Button,
   Label,
   LoadingButton,
@@ -13,7 +12,6 @@ import {
   Stack,
   Text,
   TextArea,
-  xcss,
 } from '@forge/react';
 import { invoke } from '@forge/bridge';
 
@@ -21,17 +19,14 @@ import { StarRating } from './StarRating';
 
 const COMMENT_MAX_LENGTH = 1000;
 
-const feedbackBoxStyles = xcss({
-  padding: 'space.200',
-  backgroundColor: 'elevation.surface.raised',
-  borderColor: 'color.border',
-  borderWidth: 'border.width',
-  borderStyle: 'solid',
-  borderRadius: 'border.radius',
-});
-
-const FeedbackModal = ({ current, onClose, onSaved }) => {
-  const [rating, setRating] = useState(current?.nota || 0);
+/**
+ * Modal de avaliação da revisão: nota obrigatória, comentário opcional.
+ *
+ * `initialRating` vem da estrela clicada no rodapé, para a pessoa não ter que
+ * escolher a nota de novo aqui dentro.
+ */
+export const FeedbackModal = ({ current, initialRating, onClose, onSaved }) => {
+  const [rating, setRating] = useState(initialRating || current?.nota || 0);
   const [comment, setComment] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -98,49 +93,5 @@ const FeedbackModal = ({ current, onClose, onSaved }) => {
         </LoadingButton>
       </ModalFooter>
     </Modal>
-  );
-};
-
-/** Bloco de feedback: mostra a avaliação atual, se houver, e abre o modal. */
-export const AgentFeedback = ({ feedback }) => {
-  const [current, setCurrent] = useState(feedback);
-  const [isOpen, setIsOpen] = useState(false);
-
-  const hasRating = Boolean(current?.nota);
-
-  return (
-    <Box xcss={feedbackBoxStyles}>
-      <Stack space="space.150" alignInline="center">
-        <Text size="small" weight="medium" color="color.text.subtlest">
-          {hasRating ? 'Sua equipe avaliou esta revisão' : 'Esta revisão ajudou?'}
-        </Text>
-
-        {hasRating ? (
-          <Stack space="space.100" alignInline="center">
-            <StarRating value={current.nota} isReadOnly />
-            {current.autor?.nome ? (
-              <Text size="small" color="color.text.subtlest">
-                Avaliado por {current.autor.nome}
-              </Text>
-            ) : null}
-          </Stack>
-        ) : null}
-
-        <Button appearance={hasRating ? 'subtle' : 'primary'} onClick={() => setIsOpen(true)}>
-          {hasRating ? 'Alterar avaliação' : 'Avaliar o agente'}
-        </Button>
-      </Stack>
-
-      {isOpen ? (
-        <FeedbackModal
-          current={current}
-          onClose={() => setIsOpen(false)}
-          onSaved={(saved) => {
-            setCurrent(saved);
-            setIsOpen(false);
-          }}
-        />
-      ) : null}
-    </Box>
   );
 };

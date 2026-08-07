@@ -11,18 +11,22 @@ O painel apenas **lê e apresenta** os campos que a automação preenche — ele
 | Site | `clarobr.atlassian.net` |
 | Projeto | `GML` — Central de Mudanças e Liberação |
 | Tipo de item | `[System] Mudança` (id `10056`) |
-| Usuários | Piloto controlado — apenas as contas em `ALLOWED_ACCOUNT_IDS` |
+| Usuários | Todos que enxergam a issue |
 
-A restrição é feita por `displayConditions` no `manifest.yml` e revalidada no resolver, já que display conditions são avaliadas no cliente.
+A restrição de projeto e tipo é feita por `displayConditions` no `manifest.yml` e revalidada no resolver, já que display conditions são avaliadas no cliente.
 
-### Liberar o painel para todo mundo
+### Restringir a um grupo de contas
 
-O piloto está preso em dois lugares que precisam ser alterados juntos:
+O painel já foi um piloto fechado e o mecanismo continua no código. Para reativá-lo, dois pontos precisam ser alterados juntos:
 
-1. remover a condição `jiraExpression` do bloco `displayConditions` em `manifest.yml`;
-2. esvaziar `ALLOWED_ACCOUNT_IDS` em `src/constants.js` (lista vazia desliga a checagem do resolver).
+1. preencher `ALLOWED_ACCOUNT_IDS` em `src/constants.js` (lista vazia desliga a checagem do resolver);
+2. adicionar a condição ao bloco `displayConditions` em `manifest.yml`:
 
-Para adicionar outra pessoa ao piloto em vez de liberar geral, inclua o accountId nos dois pontos.
+```yaml
+jiraExpression: 'user.accountId == "<accountId>"'
+```
+
+Só o manifesto não basta: display conditions rodam no cliente, então o resolver precisa reforçar a mesma regra.
 
 ## Estados do painel
 
@@ -72,20 +76,25 @@ Os valores das listas de seleção são exibidos **exatamente como o Jira devolv
 
 ## Feedback sobre o agente
 
-Abaixo das abas, o painel oferece uma avaliação da revisão: nota de 1 a 5 em
-estrelas e um comentário opcional, preenchidos num modal e gravados em campos da
-issue — de onde saem os indicadores por JQL, dashboard ou exportação.
+O botão **Avaliar o agente** fica ao lado do resultado da revisão, no cabeçalho,
+e abre um modal com nota de 1 a 5 em estrelas e comentário opcional. Os valores
+são gravados em campos da issue — de onde saem os indicadores por JQL, dashboard
+ou exportação.
 
-| Campo | Tipo no Jira | Conteúdo |
-| --- | --- | --- |
-| Avaliação do Agente | Number field | Nota de 1 a 5 |
-| Comentário da Avaliação | Paragraph | Comentário opcional (até 1000 caracteres) |
-| Avaliado por | User picker (single) | Quem avaliou |
-| Data da Avaliação | Date time picker | Quando avaliou |
+Quando o item já tem avaliação, aparece uma quarta aba, **Avaliação**, com a
+nota, o comentário, quem avaliou e quando; o botão do cabeçalho vira "Alterar
+avaliação". As abas são montadas a partir de uma lista justamente para que
+`Tab` e `TabPanel` não saiam de ordem quando essa aba entra ou sai.
 
-Os IDs ficam em `FEEDBACK_FIELDS` (`src/constants.js`). **Enquanto estiverem
-vazios, o bloco de feedback não aparece e nada é gravado**, então o app pode ser
-deployado antes de os campos existirem.
+| Campo | ID | Tipo no Jira | Conteúdo |
+| --- | --- | --- | --- |
+| Avaliação do Agente | `customfield_31983` | Number field | Nota de 1 a 5 |
+| Comentário da Avaliação | `customfield_31984` | Paragraph | Comentário opcional (até 1000 caracteres) |
+| Avaliado por | `customfield_31985` | User picker (single) | Quem avaliou |
+| Data da Avaliação | `customfield_31986` | Date time picker | Quando avaliou |
+
+Os IDs ficam em `FEEDBACK_FIELDS` (`src/constants.js`). **Deixar qualquer um
+vazio desliga o bloco de feedback**, sem quebrar o resto do painel.
 
 Dois pontos que costumam travar a gravação:
 
@@ -114,8 +123,9 @@ src/
     ├── labels.js                   # cor do veredito, paleta das tags, campos ausentes
     ├── parseReview.js              # texto do agente -> linhas de tabela (preservando ADF)
     └── components/
-        ├── ReviewVerdict.jsx       # resultado da revisão, centralizado e em destaque
-        ├── AgentFeedback.jsx       # bloco de avaliação + modal
+        ├── ReviewVerdict.jsx       # resultado da revisão + ação de avaliar
+        ├── FeedbackModal.jsx       # modal de avaliação
+        ├── FeedbackDetails.jsx     # aba com a avaliação já registrada
         ├── StarRating.jsx          # nota de 1 a 5 (leitura e edição)
         ├── AttentionPoints.jsx     # tags coloridas por hash
         ├── IncompleteReviewWarning.jsx  # aviso de campos ainda não preenchidos

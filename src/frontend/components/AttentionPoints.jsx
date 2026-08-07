@@ -15,12 +15,12 @@ export const AttentionPoints = ({ points }) => {
   const values = points || [];
 
   return (
-    <Stack space="space.100" alignInline="center">
+    <Stack space="space.100" alignInline="start">
       <Heading size="xsmall">Pontos de atenção</Heading>
       {values.length === 0 ? (
         <Text size="small">Nenhum ponto de atenção sinalizado pela revisão.</Text>
       ) : (
-        <Inline space="space.050" rowSpace="space.050" shouldWrap alignInline="center">
+        <Inline space="space.050" rowSpace="space.050" shouldWrap alignInline="start">
           {values.map((point) => (
             <Tag key={point} text={point} color={getTagColor(point)} appearance="rounded" />
           ))}

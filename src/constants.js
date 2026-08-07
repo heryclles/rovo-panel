@@ -13,19 +13,18 @@ export const REVIEW_FIELDS = {
 /**
  * Campos onde o painel grava o feedback do usuário sobre a revisão do agente.
  *
- * PREENCHER com os IDs depois de criar os campos no Jira. Enquanto estiverem
- * vazios, o bloco de feedback simplesmente não aparece e nada é gravado — dá
- * para deployar o app antes dos campos existirem.
- *
  * Os campos precisam estar na tela de EDIÇÃO do projeto GML / [System] Mudança,
  * senão a REST API recusa a escrita com "Field cannot be set. It is not on the
  * appropriate screen, or unknown."
+ *
+ * Deixar qualquer ID vazio desliga o bloco de feedback no painel, sem quebrar
+ * nada — útil para deployar antes de os campos existirem.
  */
 export const FEEDBACK_FIELDS = {
-  nota: '', // Number field   — nota de 1 a 5
-  comentario: '', // Paragraph      — comentário opcional
-  autor: '', // User picker    — quem avaliou
-  data: '', // Date time picker — quando avaliou
+  nota: 'customfield_31983', // Number field     — nota de 1 a 5
+  comentario: 'customfield_31984', // Paragraph        — comentário opcional
+  autor: 'customfield_31985', // User picker      — quem avaliou
+  data: 'customfield_31986', // Date time picker — quando avaliou
 };
 
 /** O feedback só entra em cena quando todos os quatro IDs estão preenchidos. */
@@ -42,10 +41,15 @@ export const TARGET_ISSUE_TYPE_ID = '10056';
 export const TARGET_PROJECT_KEY = 'GML';
 
 /**
- * Piloto controlado: enquanto o painel está em validação, apenas estas contas
- * enxergam o módulo. Para liberar geral, esvazie a lista e remova a condição
- * `jiraExpression` do manifest.yml.
+ * Restringe o painel a contas específicas. Lista vazia = liberado para todos
+ * que enxergam a issue, que é o estado atual.
+ *
+ * Para voltar a um piloto controlado, inclua os accountIds aqui **e** adicione
+ * a condição correspondente no `displayConditions` do manifest.yml:
+ *
+ *   jiraExpression: 'user.accountId == "<accountId>"'
+ *
+ * Os dois pontos precisam ser mantidos em sincronia: o manifesto controla a
+ * exibição do módulo (no cliente) e esta lista reforça a regra no resolver.
  */
-export const ALLOWED_ACCOUNT_IDS = [
-  '712020:72bf3386-d379-4be9-8784-65ca4ef74442', // Heryclles Henrique do Nascimento
-];
+export const ALLOWED_ACCOUNT_IDS = [];

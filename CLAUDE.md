@@ -30,12 +30,14 @@ existirem no Jira.
 | Projeto | `GML` — Central de Mudanças e Liberação (JSM) |
 | Tipo de item | `[System] Mudança`, id `10056` |
 | Issue com dados reais | `GML-151723` — útil para conferir formatos |
-| Piloto | Só `ALLOWED_ACCOUNT_IDS` (hoje: a conta do Heryclles) enxerga o painel |
+| Usuários | Todos que enxergam a issue (`ALLOWED_ACCOUNT_IDS` vazio) |
 
-Restringir a visibilidade exige mexer em **dois** lugares que precisam ficar em
-sincronia: `displayConditions` no `manifest.yml` e `ALLOWED_ACCOUNT_IDS` em
-`src/constants.js`. Display conditions rodam no cliente, então o resolver
-revalida projeto, tipo e conta antes de devolver dados.
+O painel já foi um piloto restrito a uma conta; o mecanismo continua no código.
+Restringir de novo exige mexer em **dois** lugares que precisam ficar em
+sincronia: `displayConditions` no `manifest.yml` (`jiraExpression` com o
+accountId) e `ALLOWED_ACCOUNT_IDS` em `src/constants.js`. Display conditions
+rodam no cliente, então o resolver revalida projeto, tipo e conta antes de
+devolver dados.
 
 ## Comandos
 

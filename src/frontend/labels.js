@@ -9,26 +9,31 @@ const withoutAccents = (value) =>
     .replace(/[\u0300-\u036f]/g, '')
     .toUpperCase();
 
-export const getVerdictAppearance = (value) => {
+/**
+ * Tom semântico do resultado, usado para o fundo, a borda e a cor do texto do
+ * card de destaque. Qualquer valor não reconhecido cai em `neutral`, então o
+ * texto exibido nunca depende desse mapeamento.
+ */
+export const getVerdictTone = (value) => {
   const normalized = withoutAccents(value);
 
   if (!normalized) {
-    return 'default';
+    return 'neutral';
   }
   if (normalized.includes('REPROV') || normalized.includes('NAO APROV')) {
-    return 'removed';
+    return 'danger';
   }
   if (normalized.includes('RESSALV') || normalized.includes('CONDICION')) {
-    return 'moved';
+    return 'warning';
   }
   if (normalized.includes('APROV')) {
     return 'success';
   }
   if (normalized.includes('PENDENT') || normalized.includes('ANALISE')) {
-    return 'inprogress';
+    return 'information';
   }
 
-  return 'default';
+  return 'neutral';
 };
 
 /**
@@ -98,3 +103,23 @@ const isEmptyValue = (value) => (Array.isArray(value) ? value.length === 0 : !va
 /** Nomes dos campos que a revisão de IA ainda não preencheu neste item. */
 export const getMissingFieldLabels = (review) =>
   FIELD_LABELS.filter(([key]) => isEmptyValue(review?.[key])).map(([, label]) => label);
+
+export const formatDateTime = (isoDate) => {
+  if (!isoDate) {
+    return null;
+  }
+
+  const date = new Date(isoDate);
+
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return date.toLocaleString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
