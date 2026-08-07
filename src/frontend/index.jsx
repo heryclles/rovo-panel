@@ -82,7 +82,12 @@ const App = () => {
     return (
       <EmptyState
         header="Revisão de IA ainda não executada"
-        description="Nenhum dos campos preenchidos pelo agente Rovo foi encontrado neste item. Assim que a automação de revisão rodar, recarregue a página para ver o resultado, a justificativa, as dimensões avaliadas e os pontos de atenção."
+        description={
+          'O agente Rovo revisa a mudança quando o item entra no status "Validação GMUD". ' +
+          'Antes disso, os campos da revisão ficam vazios — é o caso deste item agora. ' +
+          'Assim que a automação rodar, recarregue a página para ver o resultado, a justificativa, ' +
+          'as dimensões avaliadas e os pontos de atenção.'
+        }
       />
     );
   }
